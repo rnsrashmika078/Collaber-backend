@@ -1,0 +1,8 @@
+npm install @prisma/client @prisma/adapter-pg pg dotenv
+npx prisma
+npx prisma init --output ../generated/prisma
+npx create-db@latest
+
+npx prisma migrate dev --name init -> generate tables
+
+npx prisma generate -> clients

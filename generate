@@ -1,0 +1,12 @@
+Datasource "db": PostgreSQL database "postgres", schema "public" at "localhost:5432"
+
+Applying migration `20260729194700_init`
+
+The following migration(s) have been created and applied from new schema changes:
+
+prisma\migrations/
+  └─ 20260729194700_init/
+    └─ migration.sql
+
+Your database is now in sync with your schema.
+

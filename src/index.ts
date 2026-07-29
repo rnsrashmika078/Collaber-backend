@@ -1,4 +1,6 @@
+import dotenv from "dotenv";
 import app from "./server.ts";
+dotenv.config();
 
 const startServer = async () => {
   app.listen(4000, () =>
