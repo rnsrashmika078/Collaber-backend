@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import type { Express } from "express";
 
 import userRoutes from "./routes/user.routes.ts";
@@ -10,6 +11,8 @@ import authRoutes from "./routes/auth.routes.ts";
 const app: Express = express();
 
 app.use(cors(corseConfig));
+
+app.use(cookieParser());
 
 app.use(express.json());
 

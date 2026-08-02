@@ -6,3 +6,4 @@ npx create-db@latest
 npx prisma migrate dev --name init -> generate tables
 
 npx prisma generate -> clients
+npx prisma migrate reset

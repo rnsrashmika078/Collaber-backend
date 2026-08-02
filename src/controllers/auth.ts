@@ -62,6 +62,18 @@ export const login = async (req: Request, res: Response) => {
     const accessToken = signAccessToken(payload);
     const refreshToken = signRefreshToken(payload);
 
+    res.cookie("access_token", accessToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: 15 * 60 * 1000,
+    });
+    res.cookie("refresh_token", refreshToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
     return res.status(200).json({
       message: "successfully logged in!",
       success: true,
