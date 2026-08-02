@@ -1,12 +1,20 @@
 Datasource "db": PostgreSQL database "postgres", schema "public" at "localhost:5432"
 
-Applying migration `20260729194700_init`
+- Drift detected: Your database schema is not in sync with your migration history.
 
-The following migration(s) have been created and applied from new schema changes:
+The following is a summary of the differences between the expected database schema given your migrations files, and the actual schema of the database.
 
-prisma\migrations/
-  └─ 20260729194700_init/
-    └─ migration.sql
+It should be understood as the set of changes to get from the expected schema to the actual schema.
 
-Your database is now in sync with your schema.
+[+] Added tables
+  - User
 
+[*] Changed the `User` table
+  [+] Added unique index on columns (email)
+
+- The following migration(s) are applied to the database but missing from the local migrations directory: 20260729193200_init, 20260729194700_init
+
+We need to reset the "public" schema at "localhost:5432"
+
+You may use prisma migrate reset to drop the development database.
+All data will be lost.
