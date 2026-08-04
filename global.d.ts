@@ -1,1 +1,3 @@
-declare module "prisma/config"
+
+declare module "prisma/config";
+
