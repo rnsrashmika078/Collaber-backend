@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Request, Response } from "express";
 import type { ApiResponse, User } from "../types/index.ts";
-import { createUser, getUser } from "../services/user.services.ts";
+import { createUser, getUser } from "../services/user.services";
 import bcrypt from "bcrypt";
 import {
   signAccessToken,
   signRefreshToken,
   verifyRefreshToken,
-} from "../utils/jwt.ts";
-import { statusCode } from "../config/statusCode.ts";
+} from "../utils/jwt";
+
+import { statusCode } from "../config/statusCode";
 export const register = async (req: Request, res: Response) => {
   try {
     const { email, password, name, picture } = req.body;
@@ -110,10 +111,19 @@ export const refresh = async (req: Request, res: Response) => {
         result: null,
       } as ApiResponse<null>);
 
-    const user = verifyRefreshToken(refreshToken) as any;
+    const decoded = verifyRefreshToken(refreshToken) as any;
 
-    const newAccessToken = signAccessToken(user);
-    const newRefreshToken = signRefreshToken(user);
+    //TODO
+    // i'll replace below payload with decoded user
+    const payload = {
+      email: decoded.email,
+      name: decoded.name ?? "",
+      picture: decoded.picture ?? "",
+      id: decoded.id,
+    };
+
+    const newAccessToken = signAccessToken(payload);
+    const newRefreshToken = signRefreshToken(payload);
 
     res.cookie("access_token", newAccessToken, {
       httpOnly: true,
@@ -131,7 +141,7 @@ export const refresh = async (req: Request, res: Response) => {
       message: "authentication refreshed!!",
       success: true,
       error: null,
-      result: { newAccessToken, newRefreshToken, user },
+      result: { newAccessToken, newRefreshToken, user: payload },
     });
   } catch (err) {
     const errorMessage =

@@ -1,5 +1,5 @@
-import { Prisma } from "../../generated/prisma/client.ts";
-import { prisma } from "../lib/prisma.ts";
+import { Prisma } from "../../generated/prisma/client";
+import { prisma } from "../lib/prisma";
 
 export const createUser = async (newUser: Prisma.UserCreateInput) => {
   const user = await prisma.user.create({
