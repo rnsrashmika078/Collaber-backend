@@ -1,13 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Request, Response } from "express";
+import { createHash, randomBytes } from "node:crypto";
 import type { ApiResponse, User } from "../types/index.ts";
-import { createUser, getUser } from "../services/user.services";
+import {
+  createUser,
+  getUser,
+  getUserByResetToken,
+  setUserResetToken,
+  updateUserPassword,
+} from "../services/user.services";
 import bcrypt from "bcrypt";
 import {
   signAccessToken,
   signRefreshToken,
   verifyRefreshToken,
 } from "../utils/jwt";
+import { sendEmail } from "../utils/mailer";
 
 import { statusCode } from "../config/statusCode";
 export const register = async (req: Request, res: Response) => {
@@ -225,6 +233,123 @@ export const refresh = async (req: Request, res: Response) => {
       err instanceof Error ? err.message : "something went wrong";
     console.log("ERROR MESSAGE", errorMessage);
     return res.status(500).json({
+      message: "Something went wrong...",
+      error: errorMessage,
+      result: null,
+      success: false,
+    } as ApiResponse<null>);
+  }
+};
+
+export const forgotPassword = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    const user = await getUser(email);
+
+    if (user) {
+      const resetToken = randomBytes(32).toString("hex");
+      const resetTokenHash = createHash("sha256")
+        .update(resetToken)
+        .digest("hex");
+      const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
+
+      await setUserResetToken(user.id, resetTokenHash, resetTokenExpiry);
+
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+      const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+
+      await sendEmail({
+        to: email,
+        subject: "SLSTINET - Password Reset Request",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937;">
+            <div style="background: #1e3a5f; padding: 24px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 20px; letter-spacing: 2px;">SLSTINET</h1>
+            </div>
+            <div style="padding: 24px; border: 1px solid #e5e7eb; border-top: none;">
+              <p>Hello,</p>
+              <p>We received a request to reset the password for your SLSTINET account.</p>
+              <p>Click the button below to choose a new password. This link is valid for 1 hour.</p>
+              <p style="text-align: center; margin: 32px 0;">
+                <a href="${resetUrl}" style="background: #1e3a5f; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; display: inline-block; font-weight: bold;">
+                  Reset Password
+                </a>
+              </p>
+              <p style="font-size: 13px; color: #6b7280;">If the button doesn't work, copy and paste this link into your browser:</p>
+              <p style="font-size: 13px; word-break: break-all;"><a href="${resetUrl}" style="color: #1e3a5f;">${resetUrl}</a></p>
+              <p style="font-size: 13px; color: #6b7280;">If you did not request this, you can safely ignore this email.</p>
+            </div>
+            <p style="text-align: center; font-size: 12px; color: #9ca3af; margin-top: 16px;">SLSTINET Team</p>
+          </div>
+        `,
+      }).catch((err) => {
+        console.error(
+          "Password reset email failed to send:",
+          err instanceof Error ? err.message : err,
+        );
+        console.log("Password reset link (email not sent):", resetUrl);
+      });
+    }
+
+    return res.status(statusCode.SUCCESS).json({
+      message:
+        "If an account exists for that email, a password reset link has been sent.",
+      success: true,
+      error: null,
+      result: null,
+    } as ApiResponse<null>);
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error ? err.message : "something went wrong";
+    return res.status(statusCode.INTERNAL_SERVER_ERROR).json({
+      message: "Something went wrong...",
+      error: errorMessage,
+      result: null,
+      success: false,
+    } as ApiResponse<null>);
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(statusCode.BAD_REQUEST).json({
+        message: "Token and new password are required.",
+        success: false,
+        error: "Token and new password are required.",
+        result: null,
+      } as ApiResponse<null>);
+    }
+
+    const resetTokenHash = createHash("sha256").update(token).digest("hex");
+    const user = await getUserByResetToken(resetTokenHash);
+
+    if (!user) {
+      return res.status(statusCode.BAD_REQUEST).json({
+        message: "Invalid or expired reset token.",
+        success: false,
+        error: "Invalid or expired reset token.",
+        result: null,
+      } as ApiResponse<null>);
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await updateUserPassword(user.id, hashed);
+
+    return res.status(statusCode.SUCCESS).json({
+      message:
+        "Password reset successfully. You can now log in with your new password.",
+      success: true,
+      error: null,
+      result: null,
+    } as ApiResponse<null>);
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error ? err.message : "something went wrong";
+    return res.status(statusCode.INTERNAL_SERVER_ERROR).json({
       message: "Something went wrong...",
       error: errorMessage,
       result: null,
