@@ -1,0 +1,121 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  IMAGE: ghcr.io/rnsrashmika078/library_management_backend
+
+jobs:
+  # ---- Continuous Integration: install + Prisma generate + type check ----
+  ci:
+    name: CI (install + type check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+  # ---- Build & push Docker image to GitHub Container Registry ----
+  build-and-push:
+    name: Build & push image
+    needs: ci
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lowercase image name
+        id: img
+        run: echo "name=${IMAGE,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.img.outputs.name }}:latest
+            ${{ steps.img.outputs.name }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---- Deploy to the test server over SSH (docker compose) ----
+  deploy:
+    name: Deploy
+    needs: build-and-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: library_management_system_nsf
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate production .env
+        run: |
+          cat > .env <<'EOF'
+          PORT=5001
+          BACKEND_PORT=5001
+          ALLOW_ORIGIN=${{ vars.FRONTEND_URL || 'http://192.168.10.45:8082' }}
+          DB_USER=${{ secrets.DB_USER || 'postgres' }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_NAME=${{ secrets.DB_NAME || 'nsf_slstinet' }}
+          DB_HOST_PORT=5433
+          JWT_ACCESS_SECRET=${{ secrets.JWT_ACCESS_SECRET || secrets.JWT_SECRET }}
+          JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET || secrets.JWT_SECRET }}
+          JWT_ACCESS_EXPIRE=15
+          JWT_REFRESH_EXPIRE=7d
+          EOF
+
+      - name: Copy compose + env to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          source: "docker-compose.yml,.env"
+          target: ${{ secrets.DEPLOY_PATH }}
+
+      - name: Pull & restart on server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            set -e
+            cd "${{ secrets.DEPLOY_PATH }}"
+            echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker compose pull
+            docker compose up -d
+            docker image prune -f

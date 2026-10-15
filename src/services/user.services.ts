@@ -6,9 +6,8 @@ export const createUser = async (newUser: Prisma.UserCreateInput) => {
     data: newUser,
     select: {
       id: true,
-      name: true,
       email: true,
-      picture: true,
+      library_name: true,
     },
   });
 

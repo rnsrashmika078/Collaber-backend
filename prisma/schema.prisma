@@ -8,9 +8,86 @@ datasource db {
 }
 
 model User {
-  id       Int     @id @default(autoincrement())
-  email    String  @unique
-  name     String?
-  picture  String?
-  password String
+  id                            Int       @id @default(autoincrement())
+  email                         String    @unique
+  name                          String?
+  picture                       String?
+  password                      String
+  role                          String    @default("user")
+
+  // Library Details
+  library_name                  String?
+  library_address_lane1         String?
+  library_address_lane2         String?
+  library_address_lane3         String?
+  library_contact_mobile        String?
+  library_contact_landline      String?
+  library_establishment_date    DateTime?
+  library_incorporation_act     String?
+  library_type                  String?
+  library_nature                String?
+
+  // Library Officer Details
+  officer_name                  String?
+  officer_designation           String?
+  officer_email                 String?
+  officer_contact_number        String?
+  officer_whatsapp_number       String?
+
+  // Institution Details
+  institution_name              String?
+  head_of_institution           String?
+  institution_address_lane1     String?
+  institution_address_lane2     String?
+  institution_address_lane3     String?
+  institution_contact_mobile    String?
+  institution_whatsapp          String?
+
+  user_status                   String    @default("PENDING")
+  is_active                     Boolean   @default(false)
+  description                   String?
+  image_url                     String?
+
+  createdAt                     DateTime  @default(now())
+  updatedAt                     DateTime  @updatedAt
+  activities                    Activity[]
+}
+
+model Activity {
+  id            Int      @id @default(autoincrement())
+  user_id       Int
+  title         String
+  subtitle      String?
+  activity_date DateTime
+  activity_time String?
+  venue         String?
+  description   String?
+  image_url     String?
+  type          String   @default("Workshop")
+  organized_by  String?
+  publish       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model WithdrawRequest {
+  id        Int      @id @default(autoincrement())
+  user_id   Int
+  message   String
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+}
+
+model Institution {
+  id                  Int      @id @default(autoincrement())
+  institution_name    String
+  head_of_institution String?
+  address_lane1       String?
+  address_lane2       String?
+  address_lane3       String?
+  contact_number      String?
+  whatsapp_number     String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }

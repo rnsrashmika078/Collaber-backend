@@ -1,15 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Router } from "express";
-import { login, refresh, register } from "../controllers/auth";
-import { authentication } from "../middleware/auth/auth";
+import { login, refresh, register, signout } from "../controllers/auth";
+import { getInstitutionsController } from "../controllers/admin";
 const router = Router();
 
-router.post("/login", login);
-router.post("/register", register);
+router.post("/signin", login);
+router.post("/signup", register);
 router.post("/refresh", refresh);
-router.get("/user", authentication, (req, res) => {
-  res.json({
-    user: (req as any).user,
-  });
-});
+router.post("/signout", signout);
+router.get("/institutions", getInstitutionsController);
 export default router;

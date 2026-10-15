@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: slstinet-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-nsf_slstinet}
+    ports:
+      - "${DB_HOST_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: ghcr.io/rnsrashmika078/library_management_backend:latest
+    build: .
+    container_name: slstinet-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Point Prisma at the Postgres service, overriding any local value.
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD}@db:5432/${DB_NAME:-nsf_slstinet}?schema=public
+      PORT: ${BACKEND_PORT:-5001}
+    ports:
+      - "${BACKEND_PORT:-5001}:5001"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

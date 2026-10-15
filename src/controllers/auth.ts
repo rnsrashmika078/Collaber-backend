@@ -12,10 +12,62 @@ import {
 import { statusCode } from "../config/statusCode";
 export const register = async (req: Request, res: Response) => {
   try {
-    const { email, password, name, picture } = req.body;
+    const {
+      email,
+      password,
+      library_name,
+      library_address_lane1,
+      library_address_lane2,
+      library_address_lane3,
+      library_contact_mobile,
+      library_contact_landline,
+      library_establishment_date,
+      library_incorporation_act,
+      library_type,
+      library_nature,
+      officer_name,
+      officer_designation,
+      officer_email,
+      officer_contact_number,
+      officer_whatsapp_number,
+      institution_name,
+      head_of_institution,
+      institution_address_lane1,
+      institution_address_lane2,
+      institution_address_lane3,
+      institution_contact_mobile,
+      institution_whatsapp,
+    } = req.body;
 
     const hashed = await bcrypt.hash(password, 10);
-    const user = await createUser({ email, name, picture, password: hashed });
+    const user = await createUser({
+      email,
+      password: hashed,
+      library_name,
+      library_address_lane1,
+      library_address_lane2,
+      library_address_lane3,
+      library_contact_mobile,
+      library_contact_landline,
+      library_establishment_date: library_establishment_date
+        ? new Date(library_establishment_date)
+        : null,
+      library_incorporation_act,
+      library_type,
+      library_nature,
+      officer_name,
+      officer_designation,
+      officer_email,
+      officer_contact_number,
+      officer_whatsapp_number,
+      institution_name,
+      head_of_institution,
+      institution_address_lane1,
+      institution_address_lane2,
+      institution_address_lane3,
+      institution_contact_mobile,
+      institution_whatsapp,
+    });
 
     return res.status(statusCode.CREATED).json({
       message: "User registration successful!",
@@ -23,6 +75,29 @@ export const register = async (req: Request, res: Response) => {
       error: null,
       result: user,
     } as ApiResponse<User>);
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error ? err.message : "something went wrong";
+    return res.status(statusCode.INTERNAL_SERVER_ERROR).json({
+      message: "Something went wrong...",
+      error: errorMessage,
+      result: null,
+      success: false,
+    } as ApiResponse<null>);
+  }
+};
+
+export const signout = async (req: Request, res: Response) => {
+  try {
+    res.clearCookie("access_token");
+    res.clearCookie("refresh_token");
+
+    return res.status(statusCode.SUCCESS).json({
+      message: "successfully logged out!",
+      success: true,
+      error: null,
+      result: null,
+    } as ApiResponse<null>);
   } catch (err) {
     const errorMessage =
       err instanceof Error ? err.message : "something went wrong";
@@ -64,6 +139,7 @@ export const login = async (req: Request, res: Response) => {
       name: user.name ?? "",
       picture: user.picture ?? "",
       id: user.id,
+      role: user.role,
     };
 
     const accessToken = signAccessToken(payload);
@@ -113,13 +189,12 @@ export const refresh = async (req: Request, res: Response) => {
 
     const decoded = verifyRefreshToken(refreshToken) as any;
 
-    //TODO
-    // i'll replace below payload with decoded user
     const payload = {
       email: decoded.email,
       name: decoded.name ?? "",
       picture: decoded.picture ?? "",
       id: decoded.id,
+      role: decoded.role,
     };
 
     const newAccessToken = signAccessToken(payload);
