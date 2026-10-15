@@ -16,6 +16,10 @@ import {
   verifyRefreshToken,
 } from "../utils/jwt";
 import { sendEmail } from "../utils/mailer";
+import {
+  registrationReceivedTemplate,
+  resetPasswordTemplate,
+} from "../utils/emailTemplates";
 
 import { statusCode } from "../config/statusCode";
 export const register = async (req: Request, res: Response) => {
@@ -75,6 +79,20 @@ export const register = async (req: Request, res: Response) => {
       institution_address_lane3,
       institution_contact_mobile,
       institution_whatsapp,
+    });
+
+    sendEmail({
+      to: officer_email || email,
+      subject: "SLSTINET Registration Received",
+      html: registrationReceivedTemplate({
+        name: officer_name || library_name,
+        email,
+      }),
+    }).catch((err) => {
+      console.error(
+        "Registration email failed to send:",
+        err instanceof Error ? err.message : err,
+      );
     });
 
     return res.status(statusCode.CREATED).json({
@@ -262,27 +280,10 @@ export const forgotPassword = async (req: Request, res: Response) => {
       await sendEmail({
         to: email,
         subject: "SLSTINET - Password Reset Request",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937;">
-            <div style="background: #1e3a5f; padding: 24px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 20px; letter-spacing: 2px;">SLSTINET</h1>
-            </div>
-            <div style="padding: 24px; border: 1px solid #e5e7eb; border-top: none;">
-              <p>Hello,</p>
-              <p>We received a request to reset the password for your SLSTINET account.</p>
-              <p>Click the button below to choose a new password. This link is valid for 1 hour.</p>
-              <p style="text-align: center; margin: 32px 0;">
-                <a href="${resetUrl}" style="background: #1e3a5f; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; display: inline-block; font-weight: bold;">
-                  Reset Password
-                </a>
-              </p>
-              <p style="font-size: 13px; color: #6b7280;">If the button doesn't work, copy and paste this link into your browser:</p>
-              <p style="font-size: 13px; word-break: break-all;"><a href="${resetUrl}" style="color: #1e3a5f;">${resetUrl}</a></p>
-              <p style="font-size: 13px; color: #6b7280;">If you did not request this, you can safely ignore this email.</p>
-            </div>
-            <p style="text-align: center; font-size: 12px; color: #9ca3af; margin-top: 16px;">SLSTINET Team</p>
-          </div>
-        `,
+        html: resetPasswordTemplate({
+          name: user.officer_name ?? user.library_name ?? user.name ?? undefined,
+          resetUrl,
+        }),
       }).catch((err) => {
         console.error(
           "Password reset email failed to send:",

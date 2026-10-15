@@ -1,15 +1,21 @@
 import nodemailer from "nodemailer";
 
+const port = Number(process.env.MAIL_PORT) || 587;
+
 const isEmailConfigured = () =>
-  Boolean(process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS);
+  Boolean(
+    process.env.MAIL_HOST &&
+      process.env.MAIL_USERNAME &&
+      process.env.MAIL_PASSWORD,
+  );
 
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: Number(process.env.EMAIL_PORT) || 587,
-  secure: process.env.EMAIL_SECURE === "true",
+  host: process.env.MAIL_HOST,
+  port,
+  secure: port === 465,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.MAIL_USERNAME,
+    pass: process.env.MAIL_PASSWORD?.replace(/\s+/g, ""),
   },
   connectionTimeout: 10000,
   greetingTimeout: 10000,
@@ -37,12 +43,12 @@ export const sendEmail = async ({
 
   if (!isEmailConfigured()) {
     throw new Error(
-      "Email service is not configured (EMAIL_HOST/EMAIL_USER/EMAIL_PASS missing)",
+      "Email service is not configured (MAIL_HOST/MAIL_USERNAME/MAIL_PASSWORD missing)",
     );
   }
 
   await transporter.sendMail({
-    from: from || process.env.EMAIL_FROM,
+    from: from || process.env.MAIL_FROM_ADDRESS,
     to,
     subject,
     ...(html ? { html } : { text }),
