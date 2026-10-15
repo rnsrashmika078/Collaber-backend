@@ -136,8 +136,9 @@ export const login = async (req: Request, res: Response) => {
 
     const payload = {
       email,
-      name: user.name ?? "",
-      picture: user.picture ?? "",
+      name: user.officer_name ?? user.name ?? user.library_name ?? "",
+      library_name: user.library_name ?? "",
+      picture: user.picture ?? user.image_url ?? "",
       id: user.id,
       role: user.role,
     };
@@ -192,6 +193,7 @@ export const refresh = async (req: Request, res: Response) => {
     const payload = {
       email: decoded.email,
       name: decoded.name ?? "",
+      library_name: decoded.library_name ?? "",
       picture: decoded.picture ?? "",
       id: decoded.id,
       role: decoded.role,
